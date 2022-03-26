@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>filtre</title>
+</head>
+<style>
+    table,
+    td {
+        border: 1px solid #333;
+    }
+
+    thead,
+    tfoot {
+        background-color: #333;
+        color: #fff;
+    }
+
+</style>
+
+<form action="kw2.php" method="post">
+    <p>
+        <input type="text" name="mer" />
+        <input type="submit" value="filtrer" />
+    </p>
+</form>
+
+<table>
+    <tr>
+        <td> <strong>id</strong></td>
+        <td> <strong>meridien</strong></td>
+        <td> <strong>Catégories de pathologie</strong></td>
+        <td> <strong>caractéristique possible</strong></td>
+        <td> <strong>Exemples</strong></td>
+    </tr>
+<?php
+$filtre=$_POST['mer'];
+$bdd = new PDO('mysql:host=localhost;dbname=acu;charset=utf8', 'root', 'root');
+if (!$filtre){
+    $reponse = $bdd->query('SELECT * FROM patho');
+
+                while ($donnees = $reponse->fetch())
+                {
+                    ?>
+                    <tr>
+                        <td> <p><?php echo $donnees['idP']; ?></p></td>
+                        <td>  <p> <?php echo $donnees['mer']; ?></p></td>
+                        <td>  <p> <?php echo $donnees['type']; ?></p></td>
+                        <td>  <p><?php echo $donnees['desc']; ?></p></td>
+                        <td>
+                            <?php $symptomepato = $bdd->prepare('SELECT * FROM symptpatho WHERE  idP=?');
+                            $symptomepato ->execute(array( $donnees['idP'] ));
+                            while ($symp = $symptomepato->fetch())
+                            {?>
+                                <?php
+                                $descriptionSymp= $bdd->prepare('SELECT `desc` FROM symptome WHERE `symptome`.`idS` = ?');
+                                $descriptionSymp ->execute(array($symp['idS']));
+                                $des=$descriptionSymp->fetch();
+                                echo $des['desc'] ?> <br>
+                            <?php } ?>
+                        </td>
+
+                    </tr>
+
+                    <?php
+
+                }
+    $reponse->closeCursor();
+
+
+}
+
+
+else{
+    $reponse = $bdd->prepare('SELECT DISTINCT (p.idP) FROM  patho p INNER JOIN  symptpatho sp ON p.idP=sp.idP INNER JOIN symptome s ON sp.idS=s.idS INNER JOIN keysympt ks ON s.idS=ks.idS INNER JOIN keywords kw ON ks.idk=kw.idk   WHERE kw.name=? ORDER BY idP');
+    $reponse ->execute(array( $filtre ));
+
+    $vals="";
+    while ($idp = $reponse->fetch()) {
+
+        $vals = $vals . $idp['idP'] .",";
+
+    }
+    $vals=substr($vals,0,-1);
+
+        $sql='SELECT * FROM patho WHERE idP IN ('.$vals .')';
+    $reponse2= $bdd ->query($sql);
+
+
+         while ($donnees = $reponse2->fetch())
+                {
+                    ?>
+<tr>
+    <td> <p><?php echo $donnees['idP']; ?></p></td>
+    <td>  <p> <?php echo $donnees['mer']; ?></p></td>
+    <td>  <p> <?php echo $donnees['type']; ?></p></td>
+    <td>  <p><?php echo $donnees['desc']; ?></p></td>
+    <td>
+        <?php $symptomepato = $bdd->prepare('SELECT * FROM symptpatho WHERE  idP=?');
+        $symptomepato ->execute(array( $donnees['idP'] ));
+        while ($symp = $symptomepato->fetch())
+        {
+
+            $descriptionSymp= $bdd->prepare('SELECT `desc` FROM symptome WHERE `symptome`.`idS` = ?');
+            $descriptionSymp ->execute(array($symp['idS']));
+            $des=$descriptionSymp->fetch();
+            echo $des['desc'] ?> <br>
+        <?php } ?>
+    </td>
+
+</tr>
+
+
+
+<?php
+
+}
+    $reponse->closeCursor();
+    $reponse2->closeCursor();
+ }
+?>
+</table>
